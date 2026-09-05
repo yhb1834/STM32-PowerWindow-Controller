@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -37,10 +38,17 @@ typedef enum
 	WINDOW_FAULT
 }WindowState_t;
 
+typedef enum
+{
+	WINDOW_CMD_NONE = 0,
+	WINDOW_CMD_TOGGLE
+}WindowCommand_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define INA219_ADDR (0x40 << 1)
 
 /* USER CODE END PD */
 
@@ -52,10 +60,38 @@ typedef enum
 
 /* Private variables ---------------------------------------------------------*/
 
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart2;
 
+/* Definitions for InputTask */
+osThreadId_t InputTaskHandle;
+const osThreadAttr_t InputTask_attributes = {
+  .name = "InputTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for ControlTask */
+osThreadId_t ControlTaskHandle;
+const osThreadAttr_t ControlTask_attributes = {
+  .name = "ControlTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for DiagTask */
+osThreadId_t DiagTaskHandle;
+const osThreadAttr_t DiagTask_attributes = {
+  .name = "DiagTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for windowCommandQueue */
+osMessageQueueId_t windowCommandQueueHandle;
+const osMessageQueueAttr_t windowCommandQueue_attributes = {
+  .name = "windowCommandQueue"
+};
 /* USER CODE BEGIN PV */
 WindowState_t windowState = WINDOW_IDLE;
 
@@ -75,6 +111,11 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_I2C1_Init(void);
+void StartInputTask(void *argument);
+void StartControlTask(void *argument);
+void StartDiagTask(void *argument);
+
 /* USER CODE BEGIN PFP */
 void Window_SetState(WindowState_t newState);
 void Window_ButtonProcess(void);
@@ -137,22 +178,9 @@ void Window_ButtonProcess(void)
 	{
 		lastButtonTick = now;
 
-		if (windowState == WINDOW_IDLE)
-		{
-			if (nextDirectionUp == 1){
-				Window_SetState(WINDOW_MANUAL_UP);
-			}
-			else
-			{
-				Window_SetState(WINDOW_MANUAL_DOWN);
-			}
-		}
-		else
-		{
-			Window_SetState(WINDOW_IDLE);
+		WindowCommand_t cmd = WINDOW_CMD_TOGGLE;
 
-			nextDirectionUp = !nextDirectionUp;
-		}
+		osMessageQueuePut(windowCommandQueueHandle, &cmd, 0, 0);
 	}
 
 	prevButtonState = buttonState;
@@ -255,7 +283,7 @@ void Motor_RunDown(void)
 
     if (motorStarting == 0)
     {
-    	 Motor_SetDuty(30);
+    	 Motor_SetDuty(50);
 
     	 motorStartTick = HAL_GetTick();
     	 motorStarting = 1;
@@ -313,6 +341,7 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_TIM3_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   char msg[] = "PowerWindow ECU Started\r\n";
@@ -321,13 +350,81 @@ int main(void)
 
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 
+  if (HAL_I2C_IsDeviceReady(&hi2c1,
+                            INA219_ADDR,
+                            3,
+                            100) == HAL_OK)
+  {
+      char msg[] = "[INA219] Device Ready\r\n";
+
+      HAL_UART_Transmit(&huart2,
+                        (uint8_t *)msg,
+                        sizeof(msg) - 1,
+                        HAL_MAX_DELAY);
+  }
+  else
+  {
+      char msg[] = "[INA219] Device NOT Ready\r\n";
+
+      HAL_UART_Transmit(&huart2,
+                        (uint8_t *)msg,
+                        sizeof(msg) - 1,
+                        HAL_MAX_DELAY);
+  }
+
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* Create the queue(s) */
+  /* creation of windowCommandQueue */
+  windowCommandQueueHandle = osMessageQueueNew (8, sizeof(uint32_t), &windowCommandQueue_attributes);
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of InputTask */
+  InputTaskHandle = osThreadNew(StartInputTask, NULL, &InputTask_attributes);
+
+  /* creation of ControlTask */
+  ControlTaskHandle = osThreadNew(StartControlTask, NULL, &ControlTask_attributes);
+
+  /* creation of DiagTask */
+  DiagTaskHandle = osThreadNew(StartDiagTask, NULL, &DiagTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
 
   /* Initialize leds */
   BSP_LED_Init(LED2);
 
   /* Initialize USER push-button, will be used to trigger an interrupt each time it's pressed.*/
   BSP_PB_Init(BUTTON_USER, BUTTON_MODE_GPIO);
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -341,9 +438,6 @@ int main(void)
 		  lastLedTick = now;
 		  BSP_LED_Toggle(LED2);
 	  }
-
-	  Window_ButtonProcess();
-	  Window_ControlTask();
 
     /* USER CODE END WHILE */
 
@@ -397,6 +491,40 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
 }
 
 /**
@@ -517,6 +645,118 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartInputTask */
+/**
+  * @brief  Function implementing the InputTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartInputTask */
+void StartInputTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+	  Window_ButtonProcess();
+	  osDelay(10);
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartControlTask */
+/**
+* @brief Function implementing the ControlTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartControlTask */
+void StartControlTask(void *argument)
+{
+  /* USER CODE BEGIN StartControlTask */
+
+    WindowCommand_t cmd;
+
+    for (;;)
+    {
+        if (osMessageQueueGet(windowCommandQueueHandle,
+                              &cmd,
+                              NULL,
+                              0) == osOK)
+        {
+            if (cmd == WINDOW_CMD_TOGGLE)
+            {
+                if (windowState == WINDOW_IDLE)
+                {
+                    /* 정지 상태라면 다음 방향으로 출발 */
+                    if (nextDirectionUp)
+                    {
+                        Window_SetState(WINDOW_MANUAL_UP);
+                    }
+                    else
+                    {
+                        Window_SetState(WINDOW_MANUAL_DOWN);
+                    }
+                }
+                else
+                {
+                    /* 움직이는 중이면 정지 */
+                    Window_SetState(WINDOW_IDLE);
+
+                    /* 다음 출발 방향 변경 */
+                    nextDirectionUp = !nextDirectionUp;
+                }
+            }
+        }
+
+        Window_ControlTask();
+
+        osDelay(10);
+    }
+
+  /* USER CODE END StartControlTask */
+}
+
+/* USER CODE BEGIN Header_StartDiagTask */
+/**
+* @brief Function implementing the DiagTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDiagTask */
+void StartDiagTask(void *argument)
+{
+  /* USER CODE BEGIN StartDiagTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(100);
+  }
+  /* USER CODE END StartDiagTask */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM6 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM6)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

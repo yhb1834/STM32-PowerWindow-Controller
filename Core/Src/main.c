@@ -22,6 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 /* USER CODE END Includes */
 
@@ -41,7 +44,8 @@ typedef enum
 typedef enum
 {
 	WINDOW_CMD_NONE = 0,
-	WINDOW_CMD_TOGGLE
+	WINDOW_CMD_TOGGLE,
+	WINDOW_CMD_ANTI_PINCH
 }WindowCommand_t;
 
 /* USER CODE END PTD */
@@ -49,6 +53,15 @@ typedef enum
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define INA219_ADDR (0x40 << 1)
+
+#define INA219_REG_SHUNT 0x01
+#define INA219_REG_BUS 0x02
+
+#define ANTI_PINCH_THRESHOLD_MA_X10 800
+#define ANTI_PINCH_THRESHOLD_MA 80.0f
+#define ANTI_PINCH_COUNT_LIMIT 2
+#define ANTI_PINCH_BLANKING_MS 300
+#define ANTI_PINCH_REVERSE_MS 1000
 
 /* USER CODE END PD */
 
@@ -87,6 +100,13 @@ const osThreadAttr_t DiagTask_attributes = {
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for CurrentTask */
+osThreadId_t CurrentTaskHandle;
+const osThreadAttr_t CurrentTask_attributes = {
+  .name = "CurrentTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* Definitions for windowCommandQueue */
 osMessageQueueId_t windowCommandQueueHandle;
 const osMessageQueueAttr_t windowCommandQueue_attributes = {
@@ -101,8 +121,11 @@ uint32_t lastLedTick = 0;
 
 uint32_t motorStartTick = 0;
 uint8_t motorStarting = 0;
+uint8_t motorRunning = 0;
 
 uint8_t nextDirectionUp = 1;
+
+uint32_t antiPinchStartTick = 0;
 
 /* USER CODE END PV */
 
@@ -131,6 +154,138 @@ void Motor_RunDown(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+HAL_StatusTypeDef INA219_ReadRegister(uint8_t reg, uint16_t *value)
+{
+	uint8_t data[2];
+
+	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&hi2c1, INA219_ADDR, reg, I2C_MEMADD_SIZE_8BIT, data, 2, 100);
+
+	if (status == HAL_OK)
+	{
+		*value = ((uint16_t)data[0] << 8) | data[1];
+	}
+
+	return status;
+}
+
+int16_t INA219_ReadShuntRaw(void)
+{
+	uint16_t value = 0;
+
+	if (INA219_ReadRegister(INA219_REG_SHUNT, &value) != HAL_OK)
+	{
+		return 0;
+	}
+
+	return (int16_t)value;
+}
+
+uint16_t INA219_ReadBusVoltage_mV(void)
+{
+	uint16_t raw = 0;
+
+	if (INA219_ReadRegister(INA219_REG_BUS, &raw) != HAL_OK)
+	{
+		return 0;
+	}
+
+	raw >>= 3;
+
+	return raw * 4;
+}
+
+void StartCurrentSenseTask(void *argument)
+{
+    char msg[] = "[RTOS] CurrentSenseTask Started\r\n";
+
+    HAL_UART_Transmit(&huart2,
+                      (uint8_t *)msg,
+                      sizeof(msg) - 1,
+                      HAL_MAX_DELAY);
+
+	uint8_t overCurrentCount = 0;
+
+	for(;;)
+	{
+		int16_t shuntRaw = INA219_ReadShuntRaw();
+
+		// R100 = 0.1ohm
+		// current[mA] = raw * 0.1
+		int32_t current_mA_x10 = shuntRaw;
+
+		// UP 동작 중일 때만 anti pinch 감지
+		if (windowState == WINDOW_MANUAL_UP)
+		{
+
+
+			uint32_t elapsed = HAL_GetTick() - motorStartTick;
+
+
+
+			if (elapsed >= ANTI_PINCH_BLANKING_MS)
+			{
+
+				// 90.0mA = x10 RLWNS 900
+				if (current_mA_x10 >= ANTI_PINCH_THRESHOLD_MA_X10)
+				{
+					overCurrentCount++;
+
+					char dbg[100];
+					snprintf(dbg,
+							 sizeof(dbg),
+							 "[CURRENT] %ld.%01ld mA, elapsed=%lu ms, Count=%u\r\n",
+							 current_mA_x10 / 10,
+							 labs(current_mA_x10 % 10),
+							 elapsed,
+							 overCurrentCount);
+
+					HAL_UART_Transmit(&huart2,
+									  (uint8_t *)dbg,
+									  strlen(dbg),
+									  HAL_MAX_DELAY);
+
+					if (overCurrentCount >= ANTI_PINCH_COUNT_LIMIT)
+					{
+						WindowCommand_t cmd = WINDOW_CMD_ANTI_PINCH;
+
+						osStatus_t status = osMessageQueuePut(windowCommandQueueHandle, &cmd, 0, 0);
+
+						if (status == osOK)
+						{
+							char msg[] = "[ANTI-PINCH] EVENT QUEUED\r\n";
+
+							HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
+						}
+						else
+						{
+							char msg[] = "[ANTI-PINCH] QUEUE FAILED\r\n";
+
+							HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
+						}
+
+						overCurrentCount = 0;
+					}
+				}
+				else
+				{
+					overCurrentCount = 0;
+				}
+			}
+			else
+			{
+				overCurrentCount = 0;
+			}
+		}
+		else
+		{
+			overCurrentCount = 0;
+		}
+
+		osDelay(50);
+
+	}
+}
+
 void Window_SetState(WindowState_t newState)
 {
 	windowState = newState;
@@ -160,6 +315,18 @@ void Window_SetState(WindowState_t newState)
 		char msg[] = "[WINDOW] MANUAL_DOWN\r\n";
 
 		HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
+
+		break;
+	}
+
+	case WINDOW_ANTI_PINCH_REVERSE:
+	{
+		char msg[] = "[WINDOW] ANTI_PINCH_REVERSE\r\n";
+
+		HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
+
+		Motor_Stop();
+		antiPinchStartTick = HAL_GetTick();
 
 		break;
 	}
@@ -199,7 +366,7 @@ void Window_ControlTask(void)
 
 		if(motorStarting && (HAL_GetTick() - motorStartTick >= 200))
 		{
-			Motor_SetDuty(30);
+			Motor_SetDuty(50); //30
 			motorStarting = 0;
 		}
 		break;
@@ -225,6 +392,11 @@ void Window_ControlTask(void)
 
 	case WINDOW_ANTI_PINCH_REVERSE:
 		Motor_RunDown();
+
+		if(HAL_GetTick() - antiPinchStartTick >= ANTI_PINCH_REVERSE_MS)
+		{
+			Window_SetState(WINDOW_IDLE);
+		}
 		break;
 
 	case WINDOW_FAULT:
@@ -263,11 +435,12 @@ void Motor_RunUp(void)
                       MOTOR_IN2_Pin,
                       GPIO_PIN_RESET);
 
-    if (motorStarting == 0)
+    if (motorRunning == 0)
     {
     	Motor_SetDuty(50);
     	motorStartTick = HAL_GetTick();
     	motorStarting = 1;
+    	motorRunning = 1;
     }
 }
 
@@ -281,12 +454,13 @@ void Motor_RunDown(void)
                       MOTOR_IN2_Pin,
                       GPIO_PIN_SET);
 
-    if (motorStarting == 0)
+    if (motorRunning == 0)
     {
     	 Motor_SetDuty(50);
 
     	 motorStartTick = HAL_GetTick();
     	 motorStarting = 1;
+    	 motorRunning = 1;
 
     }
 
@@ -305,6 +479,7 @@ void Motor_Stop(void)
                       GPIO_PIN_RESET);
 
     motorStarting = 0;
+    motorRunning = 0;
 }
 
 
@@ -406,6 +581,9 @@ int main(void)
 
   /* creation of DiagTask */
   DiagTaskHandle = osThreadNew(StartDiagTask, NULL, &DiagTask_attributes);
+
+  /* creation of CurrentTask */
+  CurrentTaskHandle = osThreadNew(StartCurrentSenseTask, NULL, &CurrentTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -708,6 +886,13 @@ void StartControlTask(void *argument)
                     nextDirectionUp = !nextDirectionUp;
                 }
             }
+            else if (cmd == WINDOW_CMD_ANTI_PINCH)
+            {
+            	if (windowState == WINDOW_MANUAL_UP)
+            	{
+            		Window_SetState(WINDOW_ANTI_PINCH_REVERSE);
+            	}
+            }
         }
 
         Window_ControlTask();
@@ -728,13 +913,32 @@ void StartControlTask(void *argument)
 void StartDiagTask(void *argument)
 {
   /* USER CODE BEGIN StartDiagTask */
+	char msg[100];
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(100);
+//	  int16_t shuntRaw = INA219_ReadShuntRaw();
+//	  uint16_t bus_mV = INA219_ReadBusVoltage_mV();
+//
+//	  int32_t current_mA_x10 = shuntRaw;
+//
+//	  snprintf(msg, sizeof(msg), "[INA219] Bus=%u mV, Current=%ld.%01ld mA\r\n", bus_mV, current_mA_x10 / 10, labs(current_mA_x10 % 10));
+//
+//	  HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
+
+	  osDelay(100);
   }
   /* USER CODE END StartDiagTask */
 }
+
+/* USER CODE BEGIN Header_StartCurrentSenseTask */
+/**
+* @brief Function implementing the CurrentTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartCurrentSenseTask */
 
 /**
   * @brief  Period elapsed callback in non blocking mode

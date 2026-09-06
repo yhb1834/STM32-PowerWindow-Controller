@@ -1,0 +1,213 @@
+PowerWindow ECU Started
+[INA219] Device Ready
+[RTOS] CurrentSenseTask Started
+[WINDOW] MANUAL_UP
+[LEARN] Filtered=73.7 mA, Baseline=73.7 mA
+[LEARN] Filtered=71.6 mA, Baseline=72.6 mA
+[LEARN] Filtered=70.9 mA, Baseline=72.0 mA
+[LEARN] Filtered=70.3 mA, Baseline=71.6 mA
+[LEARN] Filtered=72.0 mA, Baseline=71.7 mA
+[LEARN] Filtered=70.3 mA, Baseline=71.4 mA
+[LEARN] Filtered=71.2 mA, Baseline=71.4 mA
+[LEARN] Filtered=71.7 mA, Baseline=71.4 mA
+[LEARN] Filtered=71.4 mA, Baseline=71.4 mA
+[LEARN] Filtered=68.8 mA, Baseline=71.1 mA
+[LEARN] Filtered=68.6 mA, Baseline=70.9 mA
+[LEARN] Filtered=66.4 mA, Baseline=70.5 mA
+[LEARN] Filtered=64.5 mA, Baseline=70.1 mA
+[LEARN] Filtered=63.8 mA, Baseline=69.6 mA
+[LEARN] Filtered=63.3 mA, Baseline=69.2 mA
+[LEARN] Filtered=64.0 mA, Baseline=68.9 mA
+[LEARN] Filtered=64.1 mA, Baseline=68.6 mA
+[LEARN] Filtered=66.6 mA, Baseline=68.5 mA
+[BASELINE] Ready = 68.5 mA
+[CURRENT] Raw=63.8, Filt=66.6, Base=68.5, Th=78.5, dI=0.0, Count=0
+[CURRENT] Raw=62.8, Filt=66.6, Base=68.5, Th=78.5, dI=0.0, Count=0
+[CURRENT] Raw=74.1, Filt=67.8, Base=68.5, Th=78.5, dI=1.2, Count=0
+[CURRENT] Raw=73.0, Filt=69.7, Base=68.5, Th=78.5, dI=1.9, Count=0
+[CURRENT] Raw=70.4, Filt=68.8, Base=68.5, Th=78.5, dI=0.9, Count=0
+[CURRENT] Raw=60.9, Filt=68.2, Base=68.5, Th=78.5, dI=0.6, Count=0
+[CURRENT] Raw=71.6, Filt=70.0, Base=68.5, Th=78.5, dI=1.8, Count=0
+[CURRENT] Raw=75.7, Filt=70.3, Base=68.5, Th=78.5, dI=0.3, Count=0
+[CURRENT] Raw=63.7, Filt=68.4, Base=68.5, Th=78.5, dI=-1.9, Count=0
+[CURRENT] Raw=66.9, Filt=67.7, Base=68.5, Th=78.5, dI=0.7, Count=0
+[CURRENT] Raw=74.1, Filt=70.4, Base=68.5, Th=78.5, dI=2.7, Count=0
+[CURRENT] Raw=61.7, Filt=68.4, Base=68.5, Th=78.5, dI=-2.0, Count=0
+[CURRENT] Raw=69.5, Filt=67.1, Base=68.5, Th=78.5, dI=-1.3, Count=0
+[CURRENT] Raw=72.3, Filt=68.9, Base=68.5, Th=78.5, dI=1.8, Count=0
+[CURRENT] Raw=75.8, Filt=70.6, Base=68.5, Th=78.5, dI=1.7, Count=0
+[CURRENT] Raw=64.8, Filt=68.8, Base=68.5, Th=78.5, dI=-1.8, Count=0
+[CURRENT] Raw=70.1, Filt=70.5, Base=68.5, Th=78.5, dI=1.7, Count=0
+[CURRENT] Raw=63.2, Filt=69.2, Base=68.5, Th=78.5, dI=-1.3, Count=0
+[CURRENT] Raw=73.1, Filt=69.4, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=75.5, Filt=69.3, Base=68.5, Th=78.5, dI=0.1, Count=0
+[CURRENT] Raw=72.6, Filt=70.9, Base=68.5, Th=78.5, dI=1.6, Count=0
+[CURRENT] Raw=64.6, Filt=69.8, Base=68.5, Th=78.5, dI=-1.1, Count=0
+[CURRENT] Raw=71.2, Filt=71.4, Base=68.5, Th=78.5, dI=1.6, Count=0
+[CURRENT] Raw=67.3, Filt=70.2, Base=68.5, Th=78.5, dI=-1.2, Count=0
+[CURRENT] Raw=67.6, Filt=68.6, Base=68.5, Th=78.5, dI=-1.6, Count=0
+[CURRENT] Raw=73.6, Filt=68.8, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=68.4, Filt=69.6, Base=68.5, Th=78.5, dI=0.8, Count=0
+[CURRENT] Raw=70.0, Filt=69.3, Base=68.5, Th=78.5, dI=0.3, Count=0
+[CURRENT] Raw=63.5, Filt=68.6, Base=68.5, Th=78.5, dI=0.7, Count=0
+[CURRENT] Raw=66.6, Filt=68.4, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=65.4, Filt=66.7, Base=68.5, Th=78.5, dI=-1.7, Count=0
+[CURRENT] Raw=70.9, Filt=67.2, Base=68.5, Th=78.5, dI=0.5, Count=0
+[CURRENT] Raw=63.2, Filt=65.9, Base=68.5, Th=78.5, dI=-1.3, Count=0
+[CURRENT] Raw=62.5, Filt=65.7, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=72.2, Filt=66.8, Base=68.5, Th=78.5, dI=1.1, Count=0
+[CURRENT] Raw=63.7, Filt=66.5, Base=68.5, Th=78.5, dI=0.3, Count=0
+[CURRENT] Raw=73.4, Filt=67.0, Base=68.5, Th=78.5, dI=0.5, Count=0
+[CURRENT] Raw=63.4, Filt=67.0, Base=68.5, Th=78.5, dI=0.0, Count=0
+[CURRENT] Raw=61.8, Filt=66.9, Base=68.5, Th=78.5, dI=0.1, Count=0
+[CURRENT] Raw=69.7, Filt=66.4, Base=68.5, Th=78.5, dI=0.5, Count=0
+[CURRENT] Raw=69.0, Filt=67.4, Base=68.5, Th=78.5, dI=1.0, Count=0
+[CURRENT] Raw=61.8, Filt=65.1, Base=68.5, Th=78.5, dI=-2.3, Count=0
+[CURRENT] Raw=74.6, Filt=67.3, Base=68.5, Th=78.5, dI=2.2, Count=0
+[CURRENT] Raw=62.5, Filt=67.5, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=60.1, Filt=65.6, Base=68.5, Th=78.5, dI=-1.9, Count=0
+[CURRENT] Raw=68.2, Filt=65.4, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=62.4, Filt=65.5, Base=68.5, Th=78.5, dI=0.1, Count=0
+[CURRENT] Raw=63.8, Filt=63.4, Base=68.5, Th=78.5, dI=-2.1, Count=0
+[CURRENT] Raw=71.4, Filt=65.1, Base=68.5, Th=78.5, dI=1.7, Count=0
+[CURRENT] Raw=62.3, Filt=65.6, Base=68.5, Th=78.5, dI=0.5, Count=0
+[CURRENT] Raw=74.9, Filt=66.9, Base=68.5, Th=78.5, dI=1.3, Count=0
+[CURRENT] Raw=64.3, Filt=67.3, Base=68.5, Th=78.5, dI=0.4, Count=0
+[CURRENT] Raw=69.4, Filt=68.4, Base=68.5, Th=78.5, dI=1.1, Count=0
+[CURRENT] Raw=76.7, Filt=69.5, Base=68.5, Th=78.5, dI=1.1, Count=0
+[CURRENT] Raw=65.8, Filt=70.2, Base=68.5, Th=78.5, dI=0.7, Count=0
+[CURRENT] Raw=66.9, Filt=68.6, Base=68.5, Th=78.5, dI=-1.6, Count=0
+[CURRENT] Raw=73.3, Filt=70.4, Base=68.5, Th=78.5, dI=1.8, Count=0
+[CURRENT] Raw=70.4, Filt=70.6, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=80.2, Filt=71.3, Base=68.5, Th=78.5, dI=0.7, Count=0
+[CURRENT] Raw=71.4, Filt=72.4, Base=68.5, Th=78.5, dI=1.1, Count=0
+[CURRENT] Raw=77.0, Filt=74.4, Base=68.5, Th=78.5, dI=2.0, Count=0
+[CURRENT] Raw=77.3, Filt=75.2, Base=68.5, Th=78.5, dI=0.8, Count=0
+[CURRENT] Raw=74.1, Filt=76.0, Base=68.5, Th=78.5, dI=0.8, Count=0
+[CURRENT] Raw=70.3, Filt=74.0, Base=68.5, Th=78.5, dI=-2.0, Count=0
+[CURRENT] Raw=76.5, Filt=75.0, Base=68.5, Th=78.5, dI=1.0, Count=0
+[CURRENT] Raw=68.3, Filt=73.3, Base=68.5, Th=78.5, dI=-1.7, Count=0
+[CURRENT] Raw=65.3, Filt=70.9, Base=68.5, Th=78.5, dI=-2.4, Count=0
+[CURRENT] Raw=68.7, Filt=69.8, Base=68.5, Th=78.5, dI=-1.1, Count=0
+[CURRENT] Raw=74.9, Filt=70.7, Base=68.5, Th=78.5, dI=0.9, Count=0
+[CURRENT] Raw=63.2, Filt=68.0, Base=68.5, Th=78.5, dI=-2.7, Count=0
+[CURRENT] Raw=64.7, Filt=67.3, Base=68.5, Th=78.5, dI=0.7, Count=0
+[CURRENT] Raw=68.4, Filt=67.9, Base=68.5, Th=78.5, dI=0.6, Count=0
+[CURRENT] Raw=69.3, Filt=68.1, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=72.6, Filt=67.6, Base=68.5, Th=78.5, dI=0.5, Count=0
+[CURRENT] Raw=72.2, Filt=69.4, Base=68.5, Th=78.5, dI=1.8, Count=0
+[CURRENT] Raw=78.2, Filt=72.1, Base=68.5, Th=78.5, dI=2.7, Count=0
+[CURRENT] Raw=83.4, Filt=75.1, Base=68.5, Th=78.5, dI=3.0, Count=0
+[CURRENT] Raw=72.2, Filt=75.7, Base=68.5, Th=78.5, dI=0.6, Count=0
+[CURRENT] Raw=74.2, Filt=76.0, Base=68.5, Th=78.5, dI=0.3, Count=0
+[CURRENT] Raw=71.0, Filt=75.8, Base=68.5, Th=78.5, dI=0.2, Count=0
+[CURRENT] Raw=65.9, Filt=73.3, Base=68.5, Th=78.5, dI=-2.5, Count=0
+[CURRENT] Raw=76.6, Filt=71.9, Base=68.5, Th=78.5, dI=-1.4, Count=0
+[CURRENT] Raw=64.7, Filt=70.4, Base=68.5, Th=78.5, dI=-1.5, Count=0
+[CURRENT] Raw=63.8, Filt=68.4, Base=68.5, Th=78.5, dI=-2.0, Count=0
+[CURRENT] Raw=63.6, Filt=66.9, Base=68.5, Th=78.5, dI=-1.5, Count=0
+[CURRENT] Raw=74.4, Filt=68.6, Base=68.5, Th=78.5, dI=1.7, Count=0
+[CURRENT] Raw=68.5, Filt=67.0, Base=68.5, Th=78.5, dI=-1.6, Count=0
+[CURRENT] Raw=76.1, Filt=69.2, Base=68.5, Th=78.5, dI=2.2, Count=0
+[CURRENT] Raw=71.7, Filt=70.8, Base=68.5, Th=78.5, dI=1.6, Count=0
+[CURRENT] Raw=69.0, Filt=71.9, Base=68.5, Th=78.5, dI=1.1, Count=0
+[CURRENT] Raw=70.3, Filt=71.1, Base=68.5, Th=78.5, dI=0.8, Count=0
+[CURRENT] Raw=80.9, Filt=73.6, Base=68.5, Th=78.5, dI=2.5, Count=0
+[CURRENT] Raw=73.5, Filt=73.0, Base=68.5, Th=78.5, dI=0.6, Count=0
+[CURRENT] Raw=90.6, Filt=76.8, Base=68.5, Th=78.5, dI=3.8, Count=0
+[CURRENT] Raw=77.2, Filt=78.5, Base=68.5, Th=78.5, dI=1.7, Count=0
+[CURRENT] Raw=91.2, Filt=82.6, Base=68.5, Th=78.5, dI=4.1, Count=1
+[CURRENT] Raw=80.1, Filt=82.5, Base=68.5, Th=78.5, dI=0.1, Count=2
+[ANTI-PINCH] EVENT QUEUED
+[WINDOW] IDLE
+[WINDOW] MANUAL_UP
+[LEARN] Filtered=75.0 mA, Baseline=75.0 mA
+[LEARN] Filtered=76.7 mA, Baseline=75.8 mA
+[LEARN] Filtered=74.0 mA, Baseline=75.2 mA
+[LEARN] Filtered=75.2 mA, Baseline=75.2 mA
+[LEARN] Filtered=75.0 mA, Baseline=75.1 mA
+[LEARN] Filtered=74.7 mA, Baseline=75.1 mA
+[LEARN] Filtered=73.1 mA, Baseline=74.8 mA
+[LEARN] Filtered=73.6 mA, Baseline=74.6 mA
+[LEARN] Filtered=70.9 mA, Baseline=74.2 mA
+[LEARN] Filtered=68.8 mA, Baseline=73.7 mA
+[LEARN] Filtered=68.9 mA, Baseline=73.2 mA
+[LEARN] Filtered=69.6 mA, Baseline=72.9 mA
+[LEARN] Filtered=68.3 mA, Baseline=72.6 mA
+[LEARN] Filtered=70.2 mA, Baseline=72.4 mA
+[LEARN] Filtered=72.5 mA, Baseline=72.4 mA
+[LEARN] Filtered=72.7 mA, Baseline=72.4 mA
+[LEARN] Filtered=72.2 mA, Baseline=72.4 mA
+[LEARN] Filtered=72.5 mA, Baseline=72.4 mA
+[BASELINE] Ready = 72.4 mA
+[CURRENT] Raw=65.1, Filt=70.5, Base=72.4, Th=82.4, dI=-2.0, Count=0
+[CURRENT] Raw=75.0, Filt=70.4, Base=72.4, Th=82.4, dI=0.1, Count=0
+[CURRENT] Raw=62.6, Filt=68.0, Base=72.4, Th=82.4, dI=-2.4, Count=0
+[CURRENT] Raw=65.9, Filt=66.8, Base=72.4, Th=82.4, dI=-1.2, Count=0
+[CURRENT] Raw=64.3, Filt=66.5, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=67.6, Filt=67.0, Base=72.4, Th=82.4, dI=0.5, Count=0
+[CURRENT] Raw=64.5, Filt=64.9, Base=72.4, Th=82.4, dI=-2.1, Count=0
+[CURRENT] Raw=74.8, Filt=67.4, Base=72.4, Th=82.4, dI=2.5, Count=0
+[CURRENT] Raw=67.3, Filt=67.7, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=63.0, Filt=67.4, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=65.3, Filt=66.9, Base=72.4, Th=82.4, dI=0.5, Count=0
+[CURRENT] Raw=68.6, Filt=67.8, Base=72.4, Th=82.4, dI=0.9, Count=0
+[CURRENT] Raw=71.7, Filt=67.1, Base=72.4, Th=82.4, dI=0.7, Count=0
+[CURRENT] Raw=67.6, Filt=67.2, Base=72.4, Th=82.4, dI=0.1, Count=0
+[CURRENT] Raw=74.7, Filt=69.5, Base=72.4, Th=82.4, dI=2.3, Count=0
+[CURRENT] Raw=65.3, Filt=69.5, Base=72.4, Th=82.4, dI=0.0, Count=0
+[CURRENT] Raw=74.9, Filt=70.8, Base=72.4, Th=82.4, dI=1.3, Count=0
+[CURRENT] Raw=65.3, Filt=69.5, Base=72.4, Th=82.4, dI=-1.3, Count=0
+[CURRENT] Raw=63.3, Filt=68.7, Base=72.4, Th=82.4, dI=0.8, Count=0
+[CURRENT] Raw=62.0, Filt=66.1, Base=72.4, Th=82.4, dI=-2.6, Count=0
+[CURRENT] Raw=62.5, Filt=65.6, Base=72.4, Th=82.4, dI=0.5, Count=0
+[CURRENT] Raw=66.1, Filt=63.8, Base=72.4, Th=82.4, dI=-1.8, Count=0
+[CURRENT] Raw=71.0, Filt=64.9, Base=72.4, Th=82.4, dI=1.1, Count=0
+[CURRENT] Raw=64.3, Filt=65.1, Base=72.4, Th=82.4, dI=0.2, Count=0
+[CURRENT] Raw=73.1, Filt=67.4, Base=72.4, Th=82.4, dI=2.3, Count=0
+[CURRENT] Raw=64.3, Filt=67.7, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=62.5, Filt=67.0, Base=72.4, Th=82.4, dI=0.7, Count=0
+[CURRENT] Raw=62.1, Filt=65.2, Base=72.4, Th=82.4, dI=-1.8, Count=0
+[CURRENT] Raw=74.9, Filt=67.3, Base=72.4, Th=82.4, dI=2.1, Count=0
+[CURRENT] Raw=62.9, Filt=65.3, Base=72.4, Th=82.4, dI=-2.0, Count=0
+[CURRENT] Raw=65.9, Filt=65.6, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=67.3, Filt=66.6, Base=72.4, Th=82.4, dI=1.0, Count=0
+[CURRENT] Raw=74.2, Filt=69.0, Base=72.4, Th=82.4, dI=2.4, Count=0
+[CURRENT] Raw=64.6, Filt=66.9, Base=72.4, Th=82.4, dI=-2.1, Count=0
+[CURRENT] Raw=62.9, Filt=66.9, Base=72.4, Th=82.4, dI=0.0, Count=0
+[CURRENT] Raw=74.9, Filt=68.7, Base=72.4, Th=82.4, dI=1.8, Count=0
+[CURRENT] Raw=61.0, Filt=67.5, Base=72.4, Th=82.4, dI=-1.2, Count=0
+[CURRENT] Raw=74.3, Filt=67.5, Base=72.4, Th=82.4, dI=0.0, Count=0
+[CURRENT] Raw=72.4, Filt=69.1, Base=72.4, Th=82.4, dI=1.6, Count=0
+[CURRENT] Raw=70.7, Filt=70.6, Base=72.4, Th=82.4, dI=1.5, Count=0
+[CURRENT] Raw=69.0, Filt=69.4, Base=72.4, Th=82.4, dI=-1.2, Count=0
+[CURRENT] Raw=62.8, Filt=69.8, Base=72.4, Th=82.4, dI=0.4, Count=0
+[CURRENT] Raw=71.9, Filt=69.3, Base=72.4, Th=82.4, dI=0.5, Count=0
+[CURRENT] Raw=63.3, Filt=67.5, Base=72.4, Th=82.4, dI=-1.8, Count=0
+[CURRENT] Raw=69.0, Filt=67.2, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=65.8, Filt=66.5, Base=72.4, Th=82.4, dI=0.7, Count=0
+[CURRENT] Raw=66.1, Filt=67.2, Base=72.4, Th=82.4, dI=0.7, Count=0
+[CURRENT] Raw=68.2, Filt=66.4, Base=72.4, Th=82.4, dI=0.8, Count=0
+[CURRENT] Raw=64.1, Filt=66.6, Base=72.4, Th=82.4, dI=0.2, Count=0
+[CURRENT] Raw=73.2, Filt=67.4, Base=72.4, Th=82.4, dI=0.8, Count=0
+[CURRENT] Raw=62.8, Filt=66.8, Base=72.4, Th=82.4, dI=0.6, Count=0
+[CURRENT] Raw=73.7, Filt=68.4, Base=72.4, Th=82.4, dI=1.6, Count=0
+[CURRENT] Raw=60.7, Filt=66.9, Base=72.4, Th=82.4, dI=-1.5, Count=0
+[CURRENT] Raw=63.5, Filt=66.7, Base=72.4, Th=82.4, dI=0.2, Count=0
+[CURRENT] Raw=62.9, Filt=64.7, Base=72.4, Th=82.4, dI=-2.0, Count=0
+[CURRENT] Raw=68.3, Filt=65.8, Base=72.4, Th=82.4, dI=1.1, Count=0
+[CURRENT] Raw=67.2, Filt=64.5, Base=72.4, Th=82.4, dI=-1.3, Count=0
+[CURRENT] Raw=76.0, Filt=67.5, Base=72.4, Th=82.4, dI=3.0, Count=0
+[CURRENT] Raw=80.8, Filt=71.0, Base=72.4, Th=82.4, dI=3.5, Count=0
+[CURRENT] Raw=80.8, Filt=74.6, Base=72.4, Th=82.4, dI=3.6, Count=0
+[CURRENT] Raw=70.4, Filt=75.0, Base=72.4, Th=82.4, dI=0.4, Count=0
+[CURRENT] Raw=84.7, Filt=78.5, Base=72.4, Th=82.4, dI=3.5, Count=0
+[CURRENT] Raw=78.7, Filt=79.0, Base=72.4, Th=82.4, dI=0.5, Count=0
+[CURRENT] Raw=79.0, Filt=78.7, Base=72.4, Th=82.4, dI=0.3, Count=0
+[CURRENT] Raw=87.8, Filt=80.1, Base=72.4, Th=82.4, dI=1.4, Count=0
+[CURRENT] Raw=92.3, Filt=84.5, Base=72.4, Th=82.4, dI=4.4, Count=0
+[CURRENT] Raw=79.5, Filt=83.4, Base=72.4, Th=82.4, dI=-1.1, Count=1
+[CURRENT] Raw=79.8, Filt=83.6, Base=72.4, Th=82.4, dI=0.2, Count=2
+[ANTI-PINCH] EVENT QUEUED
+[WINDOW] ANTI_PINCH_REVERSE
+[WINDOW] IDLE

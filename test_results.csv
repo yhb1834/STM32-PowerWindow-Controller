@@ -1,0 +1,8 @@
+﻿TC_ID,Objective,Result
+TC-04,Startup/learning 구간 Anti-Pinch 오검출 방지,PASS
+TC-05,정상 부하에서 Anti-Pinch Count=0 유지,PASS
+TC-06,단일 Current Spike 내성,PASS
+TC-07,연속 과전류 Anti-Pinch Event 발생,PASS
+TC-08,Anti-Pinch Event 이후 Reverse 상태 전이,PASS
+TC-09,Anti-Pinch Reverse 이후 IDLE 복귀,PASS
+TC-10,Baseline Learning 완료,PASS

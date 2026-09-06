@@ -57,11 +57,16 @@ typedef enum
 #define INA219_REG_SHUNT 0x01
 #define INA219_REG_BUS 0x02
 
-#define ANTI_PINCH_THRESHOLD_MA_X10 800
-#define ANTI_PINCH_THRESHOLD_MA 80.0f
-#define ANTI_PINCH_COUNT_LIMIT 2
-#define ANTI_PINCH_BLANKING_MS 300
-#define ANTI_PINCH_REVERSE_MS 1000
+//#define ANTI_PINCH_THRESHOLD_MA_X10 800
+#define ANTI_PINCH_COUNT_LIMIT 		3
+#define ANTI_PINCH_BLANKING_MS 		300
+#define ANTI_PINCH_REVERSE_MS 		1000
+#define BASELINE_LEARNING_MS        1000
+#define CURRENT_DELTA_THRESHOLD_X10 100
+#define CURRENT_SLOPE_THRESHOLD_X10 80   // 8.0 mA/sample
+
+#define CURRENT_FILTER_SIZE 5
+
 
 /* USER CODE END PD */
 
@@ -126,6 +131,17 @@ uint8_t motorRunning = 0;
 uint8_t nextDirectionUp = 1;
 
 uint32_t antiPinchStartTick = 0;
+
+int32_t currentBuffer[CURRENT_FILTER_SIZE] = {0};
+uint8_t currentIndex = 0;
+uint8_t currentCount = 0;
+int32_t currentSum = 0;
+int32_t prevFilteredCurrent = 0;
+
+int32_t baselineCurrent = 0;
+int32_t baselineSum = 0;
+uint16_t baselineCount = 0;
+uint8_t baselineReady = 0;
 
 /* USER CODE END PV */
 
@@ -194,6 +210,42 @@ uint16_t INA219_ReadBusVoltage_mV(void)
 	return raw * 4;
 }
 
+void Current_FilterReset(void)
+{
+    for (int i = 0; i < CURRENT_FILTER_SIZE; i++)
+    {
+        currentBuffer[i] = 0;
+    }
+
+    currentIndex = 0;
+    currentCount = 0;
+    currentSum = 0;
+    prevFilteredCurrent = 0;
+}
+
+int32_t Current_MovingAverage(int32_t newValue)
+{
+    currentSum -= currentBuffer[currentIndex];
+
+    currentBuffer[currentIndex] = newValue;
+
+    currentSum += newValue;
+
+	currentIndex++;
+
+	if (currentIndex >= CURRENT_FILTER_SIZE)
+	{
+		currentIndex = 0;
+	}
+
+	if (currentCount < CURRENT_FILTER_SIZE)
+	{
+		currentCount++;
+	}
+
+	return currentSum / currentCount;
+}
+
 void StartCurrentSenseTask(void *argument)
 {
     char msg[] = "[RTOS] CurrentSenseTask Started\r\n";
@@ -203,87 +255,172 @@ void StartCurrentSenseTask(void *argument)
                       sizeof(msg) - 1,
                       HAL_MAX_DELAY);
 
-	uint8_t overCurrentCount = 0;
+    uint8_t overCurrentCount = 0;
 
-	for(;;)
-	{
-		int16_t shuntRaw = INA219_ReadShuntRaw();
+    for (;;)
+    {
+        int16_t shuntRaw = INA219_ReadShuntRaw();
+        int32_t current_mA_x10 = shuntRaw;
 
-		// R100 = 0.1ohm
-		// current[mA] = raw * 0.1
-		int32_t current_mA_x10 = shuntRaw;
+        if (windowState == WINDOW_MANUAL_UP)
+        {
+            uint32_t elapsed =
+                HAL_GetTick() - motorStartTick;
 
-		// UP 동작 중일 때만 anti pinch 감지
-		if (windowState == WINDOW_MANUAL_UP)
-		{
+            if (elapsed >= ANTI_PINCH_BLANKING_MS)
+            {
+                int32_t filteredCurrent = Current_MovingAverage(current_mA_x10);
 
+                int32_t currentSlope = filteredCurrent - prevFilteredCurrent;
 
-			uint32_t elapsed = HAL_GetTick() - motorStartTick;
+                prevFilteredCurrent = filteredCurrent;
 
+                /*
+                 * 1. Baseline 학습 구간
+                 * 300 ms ~ 1300 ms
+                 */
+                if (elapsed <
+                    ANTI_PINCH_BLANKING_MS +
+                    BASELINE_LEARNING_MS)
+                {
+                    baselineSum += filteredCurrent;
+                    baselineCount++;
 
+                    baselineCurrent =
+                        baselineSum / baselineCount;
 
-			if (elapsed >= ANTI_PINCH_BLANKING_MS)
-			{
+                    overCurrentCount = 0;
 
-				// 90.0mA = x10 RLWNS 900
-				if (current_mA_x10 >= ANTI_PINCH_THRESHOLD_MA_X10)
-				{
-					overCurrentCount++;
+                    char dbg[120];
 
-					char dbg[100];
-					snprintf(dbg,
-							 sizeof(dbg),
-							 "[CURRENT] %ld.%01ld mA, elapsed=%lu ms, Count=%u\r\n",
-							 current_mA_x10 / 10,
-							 labs(current_mA_x10 % 10),
-							 elapsed,
-							 overCurrentCount);
+					snprintf(
+						dbg,
+						sizeof(dbg),
+						"[LEARN] Filtered=%ld.%01ld mA, Baseline=%ld.%01ld mA\r\n",
+						filteredCurrent / 10,
+						labs(filteredCurrent % 10),
+						baselineCurrent / 10,
+						labs(baselineCurrent % 10));
 
-					HAL_UART_Transmit(&huart2,
-									  (uint8_t *)dbg,
-									  strlen(dbg),
-									  HAL_MAX_DELAY);
+					HAL_UART_Transmit(
+						&huart2,
+						(uint8_t *)dbg,
+						strlen(dbg),
+						HAL_MAX_DELAY);
+                }
 
-					if (overCurrentCount >= ANTI_PINCH_COUNT_LIMIT)
-					{
-						WindowCommand_t cmd = WINDOW_CMD_ANTI_PINCH;
+                /*
+                 * 2. Baseline 학습 완료
+                 */
+                else
+                {
+                    if (baselineReady == 0)
+                    {
+                        baselineReady = 1;
 
-						osStatus_t status = osMessageQueuePut(windowCommandQueueHandle, &cmd, 0, 0);
+                        char dbg[100];
 
-						if (status == osOK)
-						{
-							char msg[] = "[ANTI-PINCH] EVENT QUEUED\r\n";
+                        snprintf(
+                            dbg,
+                            sizeof(dbg),
+                            "[BASELINE] Ready = %ld.%01ld mA\r\n",
+                            baselineCurrent / 10,
+                            labs(baselineCurrent % 10));
 
-							HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
-						}
-						else
-						{
-							char msg[] = "[ANTI-PINCH] QUEUE FAILED\r\n";
+                        HAL_UART_Transmit(
+                            &huart2,
+                            (uint8_t *)dbg,
+                            strlen(dbg),
+                            HAL_MAX_DELAY);
+                    }
 
-							HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
-						}
+                    int32_t threshold =
+                        baselineCurrent +
+                        CURRENT_DELTA_THRESHOLD_X10;
 
-						overCurrentCount = 0;
-					}
-				}
-				else
-				{
-					overCurrentCount = 0;
-				}
-			}
-			else
-			{
-				overCurrentCount = 0;
-			}
-		}
-		else
-		{
-			overCurrentCount = 0;
-		}
+                    char dbg[140];
 
-		osDelay(50);
+                    snprintf(dbg,
+                             sizeof(dbg),
+                             "[CURRENT] Raw=%ld.%01ld, Filt=%ld.%01ld, "
+                             "Base=%ld.%01ld, Th=%ld.%01ld, dI=%ld.%01ld, Count=%u\r\n",
 
-	}
+                             current_mA_x10 / 10,
+                             labs(current_mA_x10 % 10),
+
+                             filteredCurrent / 10,
+                             labs(filteredCurrent % 10),
+
+                             baselineCurrent / 10,
+                             labs(baselineCurrent % 10),
+
+                             threshold / 10,
+                             labs(threshold % 10),
+
+                             currentSlope / 10,
+                             labs(currentSlope % 10),
+
+                             overCurrentCount);
+
+                    HAL_UART_Transmit(
+                        &huart2,
+                        (uint8_t *)dbg,
+                        strlen(dbg),
+                        HAL_MAX_DELAY);
+
+                    /*
+                     * 3. Adaptive anti-pinch 판단
+                     */
+                    if (filteredCurrent >= threshold)
+                    {
+                        overCurrentCount++;
+
+                        if (overCurrentCount >=
+                            ANTI_PINCH_COUNT_LIMIT)
+                        {
+                            WindowCommand_t cmd =
+                                WINDOW_CMD_ANTI_PINCH;
+
+                            osStatus_t status =
+                                osMessageQueuePut(
+                                    windowCommandQueueHandle,
+                                    &cmd,
+                                    0,
+                                    0);
+
+                            if (status == osOK)
+                            {
+                                char msg[] =
+                                    "[ANTI-PINCH] EVENT QUEUED\r\n";
+
+                                HAL_UART_Transmit(
+                                    &huart2,
+                                    (uint8_t *)msg,
+                                    sizeof(msg) - 1,
+                                    HAL_MAX_DELAY);
+                            }
+
+                            overCurrentCount = 0;
+                        }
+                    }
+                    else
+                    {
+                        overCurrentCount = 0;
+                    }
+                }
+            }
+            else
+            {
+                overCurrentCount = 0;
+            }
+        }
+        else
+        {
+            overCurrentCount = 0;
+        }
+
+        osDelay(50);
+    }
 }
 
 void Window_SetState(WindowState_t newState)
@@ -303,9 +440,17 @@ void Window_SetState(WindowState_t newState)
 
 	case WINDOW_MANUAL_UP:
 	{
+
 		char msg[] = "[WINDOW] MANUAL_UP\r\n";
 
 		HAL_UART_Transmit(&huart2, (uint8_t *)msg, sizeof(msg)-1, HAL_MAX_DELAY);
+
+		Current_FilterReset();
+
+	    baselineCurrent = 0;
+	    baselineSum = 0;
+	    baselineCount = 0;
+	    baselineReady = 0;
 
 		break;
 	}
@@ -913,7 +1058,7 @@ void StartControlTask(void *argument)
 void StartDiagTask(void *argument)
 {
   /* USER CODE BEGIN StartDiagTask */
-	char msg[100];
+//	char msg[100];
 
   /* Infinite loop */
   for(;;)

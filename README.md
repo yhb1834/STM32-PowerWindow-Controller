@@ -6,13 +6,17 @@ STM32F446RE와 FreeRTOS를 기반으로 구현한 Power Window ECU 프로토타�
 INA219 전류 센싱, Moving Average 기반 전류 필터링,
 Baseline Learning 및 Adaptive Threshold 기반 Anti-Pinch 기능을 구현했습니다.
 
+또한 요구사항(Requirement) → 설계(Design) → 구현(Implementation) → Test Case → Test Result의
+Traceability를 간단한 형태로 구성하고, UART 로그를 Python으로 파싱하여
+Test Case별 PASS / FAIL을 자동 판정하는 Automated Verification Tool을 구현했습니다.
+
 ---
 
 ## 1. Project Overview
 
 ### Goal
 
-단순 모터 구동을 넘어 실제 차량 전자제어기 구조를 참고하여 다음 기능을 구현했습니다.
+단순 모터 구동을 넘어 실제 차량 전자제어기 개발/검증 흐름을 참고하여 다음 기능을 구현했습니다.
 
 - Power Window UP / DOWN 제어
 - State Machine 기반 Window 상태 관리
@@ -25,7 +29,11 @@ Baseline Learning 및 Adaptive Threshold 기반 Anti-Pinch 기능을 구현했�
 - Baseline Current Learning
 - Adaptive Threshold 기반 Anti-Pinch Detection
 - Anti-Pinch 발생 시 Reverse Recovery
-- 요구 기능 기반 Test Case 정의 및 검증
+- Requirement 기반 Test Case 정의
+- Requirement ↔ Test Case Traceability
+- UART LOG 기반 Python Automated Verification Tool
+- Test Case별 PASS / FAIL 자동 판정
+- CSV Test Report 생성
 
 ---
 
@@ -144,7 +152,66 @@ IN2 = HIGH
 
 ---
 
-## 6. Anti-Pinch Algorithm
+## 6. Requirements
+
+본 프로젝트에서는 구현된 기능을 기준으로 최소 단위의 Software Requirement를 정의하고,
+각 Requirement를 Test Case와 연결했습니다.
+
+> Note: 본 문서는 A-SPICE 공식 산출물이 아니라, Requirement-based Development / Verification 흐름을 학습하기 위한 프로젝트 수준의 간소화된 요구사항입니다.
+
+| Requirement ID | Requirement |
+|---|---|
+| REQ-PW-001 | 운전자가 UP 동작을 요청하면 Window ECU는 Motor를 UP 방향으로 구동해야 한다. |
+| REQ-PW-002 | 운전자가 DOWN 동작을 요청하면 Window ECU는 Motor를 DOWN 방향으로 구동해야 한다. |
+| REQ-PW-003 | Window가 동작 중일 때 정지 명령이 입력되면 ECU는 Motor를 정지하고 `WINDOW_IDLE` 상태로 전이해야 한다. |
+| REQ-PW-004 | Motor 기동 후 300 ms 이내의 Startup Current는 Anti-Pinch 판단에 사용하지 않아야 한다. |
+| REQ-PW-005 | 정상 UP 동작 중 Filtered Current가 Adaptive Threshold 미만이면 Anti-Pinch Event를 발생시키지 않아야 한다. |
+| REQ-PW-006 | Threshold를 일시적으로 1회 초과한 뒤 정상 범위로 복귀하면 Anti-Pinch Event를 발생시키지 않아야 한다. |
+| REQ-PW-007 | UP 동작 중 Filtered Current가 Adaptive Threshold를 연속 3회 초과하면 ECU는 `WINDOW_CMD_ANTI_PINCH` Event를 발생시켜야 한다. |
+| REQ-PW-008 | Anti-Pinch Event가 발생하면 ECU는 `WINDOW_ANTI_PINCH_REVERSE` 상태로 전이하고 Motor를 DOWN 방향으로 구동해야 한다. |
+| REQ-PW-009 | Anti-Pinch Reverse가 시작된 후 1000 ms가 경과하면 ECU는 Motor를 정지하고 `WINDOW_IDLE` 상태로 복귀해야 한다. |
+| REQ-PW-010 | Startup Blanking 이후 정상 운전 구간의 Filtered Current를 이용하여 Baseline Current를 학습해야 한다. |
+| REQ-PW-011 | Anti-Pinch Threshold는 `Baseline Current + 10 mA`로 계산되어야 한다. |
+
+---
+
+## 7. Requirement Traceability
+
+Requirement → Design → Implementation → Test Case → Test Result 흐름을 다음과 같이 구성했습니다.
+
+```text
+Requirement
+    ↓
+Software Design
+    ↓
+Implementation
+    ↓
+Test Case
+    ↓
+UART Log / Test Evidence
+    ↓
+Automated PASS / FAIL
+```
+
+### Traceability Matrix
+
+| Requirement ID | Design / Implementation | Test Case | Result |
+|---|---|---|---|
+| REQ-PW-001 | `WINDOW_MANUAL_UP`, `Motor_RunUp()` | TC-01 | PASS |
+| REQ-PW-002 | `WINDOW_MANUAL_DOWN`, `Motor_RunDown()` | TC-02 | PASS |
+| REQ-PW-003 | `WINDOW_IDLE`, `Motor_Stop()` | TC-03 | PASS |
+| REQ-PW-004 | `ANTI_PINCH_BLANKING_MS = 300` | TC-04 | PASS |
+| REQ-PW-005 | Filtered Current / Adaptive Threshold 비교 | TC-05 | PASS |
+| REQ-PW-006 | Consecutive Count Reset Logic | TC-06 | PASS |
+| REQ-PW-007 | `ANTI_PINCH_COUNT_LIMIT = 3` / Queue Event | TC-07 | PASS |
+| REQ-PW-008 | `WINDOW_ANTI_PINCH_REVERSE` | TC-08 | PASS |
+| REQ-PW-009 | `ANTI_PINCH_REVERSE_MS = 1000` | TC-09 | PASS |
+| REQ-PW-010 | Baseline Learning Logic | TC-10 | PASS |
+| REQ-PW-011 | `baselineCurrent + CURRENT_DELTA_THRESHOLD_X10` | TC-10 + Log Evidence | PASS |
+
+---
+
+## 8. Anti-Pinch Algorithm
 
 초기에는 Fixed Current Threshold 방식으로 구현했습니다.
 
@@ -166,23 +233,17 @@ if (current >= 80mA)
 
 ### Step 1. Startup Blanking
 
-Motor Start 직후 발생하는 높은 Startup Current를 Anti-Pinch로 오검출하지 않도록 일정 시간 동안 Detection을 비활성화했습니다.
-
 ```c
 #define ANTI_PINCH_BLANKING_MS 300
 ```
 
 ### Step 2. Moving Average Filter
 
-INA219 Current Signal의 순간적인 변동을 줄이기 위해 최근 5개의 Sample을 평균내는 Moving Average Filter를 적용했습니다.
-
 ```c
 #define CURRENT_FILTER_SIZE 5
 ```
 
 ### Step 3. Baseline Current Learning
-
-Motor Start 후 정상 운전 구간의 Filtered Current를 학습하여 Baseline을 생성합니다.
 
 ```text
 0 ~ 300 ms
@@ -201,13 +262,9 @@ Anti-Pinch Detection
 
 ### Step 4. Adaptive Threshold
 
-Anti-Pinch Threshold를 고정값 대신 다음과 같이 결정합니다.
-
 ```text
 Threshold = Baseline Current + Current Delta
 ```
-
-현재 Calibration:
 
 ```c
 #define CURRENT_DELTA_THRESHOLD_X10 100
@@ -219,29 +276,25 @@ Threshold = Baseline Current + Current Delta
 Threshold = Baseline + 10mA
 ```
 
-예시:
-
-```text
-Baseline = 72.4mA
-Threshold = 82.4mA
-```
-
 ### Step 5. Consecutive Sample Detection
-
-단일 Current Spike에 의해 Anti-Pinch가 발생하지 않도록 Threshold를 연속 3회 초과할 경우에만 Event를 발생시킵니다.
 
 ```c
 #define ANTI_PINCH_COUNT_LIMIT 3
 ```
 
+단일 Current Spike가 아니라 Threshold를 연속 3회 초과할 때 Anti-Pinch Event를 발생시킵니다.
+
 ---
 
-## 7. Anti-Pinch Recovery
+## 9. Anti-Pinch Recovery
 
-Anti-Pinch가 감지되면 CurrentTask가 직접 Motor를 제어하지 않고 `WINDOW_CMD_ANTI_PINCH` Command를 Queue에 전달합니다.
+Anti-Pinch가 감지되면 CurrentTask가 직접 Motor를 제어하지 않고
+`WINDOW_CMD_ANTI_PINCH` Command를 Queue에 전달합니다.
 
 ```text
 WINDOW_MANUAL_UP
+       ↓
+WINDOW_CMD_ANTI_PINCH
        ↓
 WINDOW_ANTI_PINCH_REVERSE
        ↓
@@ -260,10 +313,11 @@ WINDOW_IDLE
 
 <img width="654" height="474" alt="스크린샷 2026-09-06 144059" src="https://github.com/user-attachments/assets/d08fb272-72a2-4ddd-a61e-5fafd5f551d6" />
 
+---
 
-## 8. Verification Strategy
+## 10. Verification Strategy
 
-검증 항목은 단순 정상동작 확인에 그치지 않고 정상 상태 / 과도 상태 / 이상 상태로 나누어 구성했습니다.
+검증 항목은 정상 동작 확인에 그치지 않고 정상 상태 / 과도 상태 / 이상 상태로 나누어 구성했습니다.
 
 - Functional Test
 - Transient / Robustness Test
@@ -272,7 +326,7 @@ WINDOW_IDLE
 
 ---
 
-## 9. Test Cases
+## 11. Test Cases
 
 | TC ID | Test Objective | Preconditions | Test Input / Condition | Expected Result | Result |
 |---|---|---|---|---|---|
@@ -289,7 +343,76 @@ WINDOW_IDLE
 
 ---
 
-## 10. Representative Test Evidence
+## 12. Automated Verification Tool
+
+UART 로그를 Python으로 파싱하여 각 Test Case의 Expected Result와 실제 동작을 비교하고,
+PASS / FAIL을 자동 판정하도록 검증 도구를 구현했습니다.
+
+### Verification Flow
+
+```text
+STM32 UART Log
+      ↓
+Python Log Parser
+      ↓
+Current / Baseline / Threshold / Count / State Parsing
+      ↓
+Test Condition Evaluation
+      ↓
+PASS / FAIL
+      ↓
+CSV Test Report
+```
+
+### Automated Check Items
+
+- TC-04: Startup / Learning 구간 Anti-Pinch 오검출 여부
+- TC-05: 정상 부하에서 Anti-Pinch Count=0 유지 여부
+- TC-06: 단일 Current Spike 이후 Count Reset 여부
+- TC-07: 연속 과전류 이후 Anti-Pinch Event 발생 여부
+- TC-08: Anti-Pinch Event 이후 Reverse 상태 전이 여부
+- TC-09: Reverse 이후 IDLE 복귀 여부
+- TC-10: Baseline Learning 완료 여부
+
+### Example Automated Verification Result
+
+```text
+================================
+ Power Window Verification
+================================
+TC-04 | PASS | Startup/learning 구간 Anti-Pinch 오검출 방지
+TC-05 | PASS | 정상 부하에서 Anti-Pinch Count=0 유지
+TC-06 | PASS | 단일 Current Spike 내성
+TC-07 | PASS | 연속 과전류 Anti-Pinch Event 발생
+TC-08 | PASS | Anti-Pinch Event 이후 Reverse 상태 전이
+TC-09 | PASS | Anti-Pinch Reverse 이후 IDLE 복귀
+TC-10 | PASS | Baseline Learning 완료
+--------------------------------
+Detected Baseline: 68.5 mA
+```
+
+### CSV Test Report
+
+```text
+TC_ID,Objective,Result
+TC-04,Startup/learning 구간 Anti-Pinch 오검출 방지,PASS
+TC-05,정상 부하에서 Anti-Pinch Count=0 유지,PASS
+TC-06,단일 Current Spike 내성,PASS
+TC-07,연속 과전류 Anti-Pinch Event 발생,PASS
+TC-08,Anti-Pinch Event 이후 Reverse 상태 전이,PASS
+TC-09,Anti-Pinch Reverse 이후 IDLE 복귀,PASS
+TC-10,Baseline Learning 완료,PASS
+```
+
+테스트 조건이 로그에 존재하지 않는 경우에는 무조건 PASS로 처리하지 않고,
+`NOT_TESTED`로 분리할 수 있도록 설계 방향을 잡았습니다.
+
+---
+
+<img width="951" height="255" alt="스크린샷 2026-09-06 165848" src="https://github.com/user-attachments/assets/0808f276-025c-4356-9a10-45cafc467253" />
+
+
+## 13. Representative Test Evidence
 
 실제 Motor 부하 시험에서 다음과 같은 결과를 확인했습니다.
 
@@ -335,7 +458,7 @@ Idle
 
 ---
 
-## 11. Debugging & Engineering Findings
+## 14. Debugging & Engineering Findings
 
 ### Startup Current False Positive
 초기 Startup Current가 Threshold를 초과하여 Anti-Pinch로 오검출되는 문제가 발생했습니다.
@@ -357,59 +480,62 @@ Normal Current가 Motor Load 및 PWM Duty에 따라 변화하여 Fixed Threshold
 해결:
 - Fixed Threshold → Baseline Learning → Adaptive Threshold
 
+### Manual Verification Limitation
+UART 로그를 사람이 직접 읽으며 Test Case를 판정할 경우 반복 시험에서 동일한 판정 기준을 유지하기 어렵고 결과 정리에 시간이 소요됐습니다.
+
+해결:
+- Python 기반 Log Parser 구현
+- Expected Condition 기반 자동 판정
+- Test Case별 PASS / FAIL Report 생성
+- CSV 결과 저장
+
 ---
 
-## 12. Current Detection Logic
+## 15. Development & Verification Traceability
+
+본 프로젝트에서는 다음 흐름을 프로젝트 수준에서 직접 구성했습니다.
 
 ```text
-Motor UP Start
-     ↓
-Startup Blanking
-     ↓
-Moving Average
-     ↓
-Baseline Learning
-     ↓
-Baseline Ready
-     ↓
-Threshold = Baseline + 10mA
-     ↓
-Filtered Current > Threshold?
-     ↓ Yes
-Consecutive Count++
-     ↓
-Count >= 3?
-     ↓ Yes
-WINDOW_CMD_ANTI_PINCH
-     ↓
-Message Queue
-     ↓
-ControlTask
-     ↓
-ANTI_PINCH_REVERSE
+Requirement
+    ↓
+Design
+    ↓
+Implementation
+    ↓
+Test Case
+    ↓
+Test Evidence
+    ↓
+Automated Test Result
 ```
+
+이를 통해 단순 기능 구현보다,
+요구사항이 어떤 SW 설계와 구현으로 연결되고 어떤 Test Case로 검증되는지를 추적하는
+Requirement-based Development / Verification 방식을 실습했습니다.
 
 ---
 
-## 13. Verification-Oriented Learning
+## 16. Verification-Oriented Learning
 
-본 프로젝트에서는 단순 기능 구현뿐 아니라 요구 기능을 Test Case로 분해하고 정상 / 과도 / 이상 조건을 나누어 검증했습니다.
+본 프로젝트를 통해 다음 역량을 실습했습니다.
 
-특히 Startup Current로 인한 False Positive, Filter History 영향, Fixed Threshold의 한계를 실제 로그를 통해 확인하고 검출 로직을 반복 개선했습니다.
-
-이를 통해 다음 역량을 실습했습니다.
-
+- Requirement 정의
+- Requirement ↔ Test Case Traceability
 - Requirement-based Test Case 설계
 - 정상 / 과도 / 이상 조건 분리
 - UART LOG 기반 동작 분석
+- Python 기반 LOG Parsing
+- Expected Result 기반 자동 판정
+- CSV Test Report 생성
 - False Positive 분석
 - Calibration Parameter 조정
 - State Transition 검증
 - Event-driven SW Verification
+- Verification Automation
 
 ---
 
-## 14. Future Improvements
+## 17. Future Improvements
 
 - AUTO UP / AUTO DOWN
 - Upper / Lower Limit Switch
@@ -425,12 +551,16 @@ ANTI_PINCH_REVERSE
 - Diagnostic Trouble Code
 - Watchdog
 - NVM Calibration Storage
-- Automated Test Script / Simulation
+- TC-01 ~ TC-03 자동 판정 확대
+- 실시간 Serial Log Capture 자동화
+- Automated Regression Test
 - Fault Injection Test
+- Test Result Visualization / Plot
+- Requirement ↔ Test Case ↔ Result Traceability 자동화
 
 ---
 
-## 15. Tech Stack
+## 18. Tech Stack
 
 ### Embedded
 - STM32F446RE
@@ -443,6 +573,14 @@ ANTI_PINCH_REVERSE
 - CMSIS-RTOS v2
 - Task
 - Message Queue
+
+### Verification / Automation
+- Python
+- Regular Expression
+- UART Log Parsing
+- CSV Test Report
+- Automated PASS / FAIL Evaluation
+- Requirement Traceability
 
 ### Interface
 - I2C
@@ -457,10 +595,18 @@ ANTI_PINCH_REVERSE
 
 ---
 
-## 16. Summary
+## 19. Summary
 
 STM32F446RE·FreeRTOS 기반 Power Window ECU 프로토타입을 구현하고,
-INA219 전류 센싱과 Moving Average, Startup Blanking, Baseline Learning을 적용한 Adaptive Threshold 기반 Anti-Pinch Detection Logic을 개발했습니다.
+INA219 전류 센싱과 Moving Average, Startup Blanking, Baseline Learning을 적용한
+Adaptive Threshold 기반 Anti-Pinch Detection Logic을 개발했습니다.
 
-또한 요구 기능을 정상 / 과도 / 이상 조건으로 분해하여 10개 Test Case를 정의하고,
-UART LOG 기반으로 False Positive 및 State Transition을 검증했습니다.
+또한 구현 기능을 11개의 Requirement로 정의하고,
+각 Requirement를 Design / Implementation / Test Case / Test Result와 연결하여
+프로젝트 수준의 Traceability를 구성했습니다.
+
+요구 기능은 정상 / 과도 / 이상 조건으로 분해하여 10개 Test Case로 검증했으며,
+Python 기반 Automated Verification Tool을 구현해 UART 로그에서
+Baseline, Threshold, Current, Count, State 정보를 파싱하고 Test Case별 PASS / FAIL을 자동 판정했습니다.
+
+최종 검증 결과는 CSV Test Report로 생성하여 반복 검증 결과를 동일한 기준으로 확인할 수 있도록 구성했습니다.
